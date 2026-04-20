@@ -56,6 +56,16 @@ npm run dev
 
 UI: http://localhost:5173
 
+### 4. Imagem ESP-IDF (pré-pull recomendado)
+
+O build do firmware usa `espressif/idf:release-v5.4`. A imagem tem ~3 GB — o primeiro build vai baixar isso, então é útil puxar antes para separar "download lento" de "compilação":
+
+```bash
+docker pull espressif/idf:release-v5.4
+```
+
+Depois disso, um build típico de `hello-world` leva ~2–4 min na primeira vez (configuração do CMake) e alguns segundos nas seguintes. Como cada build roda em um workdir temporário novo, **não há cache incremental entre builds** ainda — isso entra como otimização futura.
+
 ## Roadmap
 
 Ver [proposta.md](proposta.md) para o detalhamento. Em alto nível:
