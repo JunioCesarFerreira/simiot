@@ -64,7 +64,19 @@ O build do firmware usa `espressif/idf:release-v5.4`. A imagem tem ~3 GB — o p
 docker pull espressif/idf:release-v5.4
 ```
 
-Depois disso, um build típico de `hello-world` leva ~2–4 min na primeira vez (configuração do CMake) e alguns segundos nas seguintes. Como cada build roda em um workdir temporário novo, **não há cache incremental entre builds** ainda — isso entra como otimização futura.
+Depois disso, um build típico de `hello-world` leva ~2–4 min na primeira vez (configuração do CMake) e alguns segundos nas seguintes. Os artefatos ficam em `backend/.simiot-work/builds/<build_id>/` para serem reusados pela execução em QEMU.
+
+### 5. Imagem QEMU ESP32 (build local)
+
+A execução dos nós usa uma imagem customizada que estende `espressif/idf:release-v5.4` e instala o fork QEMU Xtensa via `idf_tools`:
+
+```bash
+docker build -t simiot/esp32-qemu:latest containers/esp32-qemu/
+```
+
+O build leva alguns minutos na primeira vez (download do binário do QEMU). Depois disso, clicar "executar" no frontend sobe um container desse tipo montando o workdir do último build bem-sucedido e expõe o serial da ESP32 emulada via `docker logs`.
+
+> **Nota**: esta etapa (2A) só cobre serial log. A rede QEMU → Mosquitto entra na próxima etapa.
 
 ## Roadmap
 

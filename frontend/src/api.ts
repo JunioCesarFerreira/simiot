@@ -37,6 +37,19 @@ export interface Build {
   finished_at: string | null
 }
 
+export type RunStatus = 'idle' | 'running' | 'stopping' | 'stopped' | 'failed'
+
+export interface Run {
+  project_id: string
+  status: RunStatus
+  build_id: string | null
+  logs: string
+  container_id: string | null
+  started_at: string | null
+  finished_at: string | null
+  stop_requested: boolean
+}
+
 export const api = {
   health: () => request<{ status: string }>('/api/health'),
   listProjects: () => request<Project[]>('/api/projects'),
@@ -57,4 +70,10 @@ export const api = {
     request<Build>(`/api/projects/${projectId}/builds/${buildId}`),
   listBuilds: (projectId: string) =>
     request<Build[]>(`/api/projects/${projectId}/builds`),
+  getRun: (projectId: string) =>
+    request<Run>(`/api/projects/${projectId}/run`),
+  startRun: (projectId: string) =>
+    request<Run>(`/api/projects/${projectId}/run`, { method: 'POST' }),
+  stopRun: (projectId: string) =>
+    request<Run>(`/api/projects/${projectId}/stop`, { method: 'POST' }),
 }

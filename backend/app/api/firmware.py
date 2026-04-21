@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel
 
 from app.api.projects import _projects
+from app.core.config import settings
 from app.services.builder import build_firmware
 from app.services.templates import DEFAULT_FIRMWARE_FILES
 
@@ -38,6 +40,10 @@ class FirmwareFiles(BaseModel):
 _firmware: dict[UUID, dict[str, str]] = {}
 _builds: dict[UUID, Build] = {}
 _project_builds: dict[UUID, list[UUID]] = {}
+
+
+def build_workdir(build_id: UUID) -> Path:
+    return settings.work_dir / "builds" / str(build_id)
 
 
 def _ensure_project(project_id: UUID) -> None:
@@ -75,7 +81,7 @@ def _run_build(build_id: UUID, files: dict[str, str]) -> None:
         build.logs += chunk
 
     try:
-        exit_code = build_firmware(files, on_log=append_log)
+        exit_code = build_firmware(files, build_workdir(build_id), on_log=append_log)
     except Exception as exc:
         build.logs += f"\ninternal error: {exc}\n"
         build.exit_code = 1
