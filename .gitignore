@@ -29,3 +29,4 @@ Thumbs.db
 # Runtime data
 containers/nodered/data/
 backend/.simiot-work/
+.codex
