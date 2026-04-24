@@ -12,6 +12,9 @@ from docker.models.containers import Container
 LogSink = Callable[[str], None]
 
 
+QEMU_EXTRA_ARGS = "-netdev user,id=net0,hostname=esp32 -device open_eth,netdev=net0"
+
+
 def start_node(image: str, workdir: Path, network: str, name: str) -> Container:
     client = docker.from_env()
     _ensure_network(client, network)
@@ -21,6 +24,7 @@ def start_node(image: str, workdir: Path, network: str, name: str) -> Container:
         pass
     return client.containers.run(
         image,
+        command=["idf.py", "qemu", "--qemu-extra-args", QEMU_EXTRA_ARGS],
         volumes={str(workdir.resolve()): {"bind": "/project", "mode": "rw"}},
         working_dir="/project",
         network=network,

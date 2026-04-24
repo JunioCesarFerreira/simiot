@@ -7,6 +7,8 @@ services:
       - "9001:9001"
     volumes:
       - ./containers/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    networks:
+      - simiot
     restart: unless-stopped
 
   nodered:
@@ -16,9 +18,15 @@ services:
       - "1880:1880"
     volumes:
       - nodered_data:/data
+    networks:
+      - simiot
     depends_on:
       - mosquitto
     restart: unless-stopped
 
 volumes:
   nodered_data:
+
+networks:
+  simiot:
+    name: simiot-net
