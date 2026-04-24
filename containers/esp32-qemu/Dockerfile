@@ -14,6 +14,9 @@ RUN bash -lc '. "$IDF_PATH/export.sh" >/dev/null && \
 
 WORKDIR /project
 
+COPY simiot-qemu-runner.py /usr/local/bin/simiot-qemu-runner
+RUN chmod +x /usr/local/bin/simiot-qemu-runner
+
 # Default command: boot the firmware already built under /project in QEMU,
 # routing the guest's UART to this container's stdout.
-CMD ["idf.py", "qemu"]
+CMD ["simiot-qemu-runner"]

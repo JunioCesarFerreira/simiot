@@ -21,11 +21,23 @@ containers/    Dockerfiles e configs dos serviços auxiliares
 
 ## Rodando em desenvolvimento
 
-Pré-requisitos: Python 3.11+, Node 20+, Docker Desktop.
+Pré-requisitos: Python 3.11+, Node 20+, Docker Engine (no Linux não é necessário Docker Desktop — apenas Docker Engine + Compose plugin).
+
+### 0. Instalar Node.js 20+ (Debian/Ubuntu)
+
+Se `node` não estiver disponível:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+Verifique com `node --version` e `npm --version`.
 
 ### 1. Serviços auxiliares (Mosquitto + Node-RED)
 
 ```bash
+docker network create simiot-net 2>/dev/null || true
 docker compose -f docker-compose.dev.yml up -d
 ```
 
@@ -37,8 +49,8 @@ docker compose -f docker-compose.dev.yml up -d
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/Scripts/activate   # Windows bash
+python3 -m venv .venv
+source .venv/bin/activate        # Linux / macOS
 pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```

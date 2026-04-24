@@ -113,7 +113,7 @@ void app_main(void)
     xEventGroupWaitBits(net_evt, GOT_IP_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
     esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = "mqtt://mosquitto:1883",
+        .broker.address.uri = "mqtt://10.0.2.2:1883",
     };
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
     ESP_ERROR_CHECK(esp_mqtt_client_register_event(

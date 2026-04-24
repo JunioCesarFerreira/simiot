@@ -30,3 +30,4 @@ volumes:
 networks:
   simiot:
     name: simiot-net
+    external: true

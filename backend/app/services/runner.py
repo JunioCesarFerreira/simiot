@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 
 import docker
@@ -12,19 +13,14 @@ from docker.models.containers import Container
 LogSink = Callable[[str], None]
 
 
-QEMU_EXTRA_ARGS = "-netdev user,id=net0,hostname=esp32 -device open_eth,netdev=net0"
-
-
 def start_node(image: str, workdir: Path, network: str, name: str) -> Container:
     client = docker.from_env()
     _ensure_network(client, network)
-    try:
+    with suppress(NotFound):
         client.containers.get(name).remove(force=True)
-    except NotFound:
-        pass
     return client.containers.run(
         image,
-        command=["idf.py", "qemu", "--qemu-extra-args", QEMU_EXTRA_ARGS],
+        command=["simiot-qemu-runner"],
         volumes={str(workdir.resolve()): {"bind": "/project", "mode": "rw"}},
         working_dir="/project",
         network=network,
@@ -47,14 +43,10 @@ def stream_logs(container: Container, on_log: LogSink) -> int:
 
 
 def stop_node(container: Container) -> None:
-    try:
+    with suppress(DockerException):
         container.stop(timeout=5)
-    except DockerException:
-        pass
-    try:
+    with suppress(DockerException):
         container.remove(force=True)
-    except DockerException:
-        pass
 
 
 def _ensure_network(client: docker.DockerClient, network: str) -> None:
