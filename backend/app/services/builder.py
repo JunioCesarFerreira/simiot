@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 
 import docker
 from docker.errors import DockerException
+
+from app.services.firmware_paths import validate_firmware_files
 
 ESP_IDF_IMAGE = "espressif/idf:release-v5.4"
 BUILD_CMD = "idf.py set-target esp32 && idf.py build"
@@ -28,8 +31,10 @@ def build_firmware(
         if on_log is not None:
             on_log(chunk)
 
+    safe_files = validate_firmware_files(files)
+
     workdir.mkdir(parents=True, exist_ok=True)
-    for rel_path, content in files.items():
+    for rel_path, content in safe_files.items():
         target = workdir / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
@@ -57,9 +62,7 @@ def build_firmware(
             emit(chunk.decode("utf-8", errors="replace"))
         result = container.wait()
     finally:
-        try:
+        with suppress(DockerException):
             container.remove(force=True)
-        except DockerException:
-            pass
 
     return int(result.get("StatusCode", 1))

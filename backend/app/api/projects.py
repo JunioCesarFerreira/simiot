@@ -43,4 +43,13 @@ def get_project(project_id: UUID) -> Project:
 def delete_project(project_id: UUID) -> None:
     if project_id not in _projects:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "project not found")
+    _cleanup_project(project_id)
     del _projects[project_id]
+
+
+def _cleanup_project(project_id: UUID) -> None:
+    from app.api.firmware import cleanup_project_firmware_state
+    from app.api.run import cleanup_project_run_state
+
+    cleanup_project_run_state(project_id)
+    cleanup_project_firmware_state(project_id)

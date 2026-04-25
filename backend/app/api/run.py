@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import threading
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
 
 from docker.models.containers import Container
@@ -17,7 +17,7 @@ from app.services.runner import start_node, stop_node, stream_logs
 router = APIRouter()
 
 
-class RunStatus(str, Enum):
+class RunStatus(StrEnum):
     IDLE = "idle"
     RUNNING = "running"
     STOPPING = "stopping"
@@ -67,7 +67,7 @@ def _follow(project_id: UUID, container: Container) -> None:
         run.status = RunStatus.STOPPED
     else:
         run.status = RunStatus.FAILED
-    run.finished_at = datetime.now(timezone.utc)
+    run.finished_at = datetime.now(UTC)
     _containers.pop(project_id, None)
 
 
@@ -107,7 +107,7 @@ def start_run(project_id: UUID) -> Run:
         project_id=project_id,
         status=RunStatus.RUNNING,
         build_id=build_id,
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
     )
     _runs[project_id] = run
 
@@ -121,7 +121,7 @@ def start_run(project_id: UUID) -> Run:
     except Exception as exc:
         run.status = RunStatus.FAILED
         run.logs = f"failed to start container: {exc}\n"
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
         return run
 
     _containers[project_id] = container
@@ -141,3 +141,13 @@ def stop_run(project_id: UUID) -> Run:
     run.status = RunStatus.STOPPING
     stop_node(container)
     return run
+
+
+def cleanup_project_run_state(project_id: UUID) -> None:
+    run = _runs.pop(project_id, None)
+    container = _containers.pop(project_id, None)
+    if run is not None:
+        run.stop_requested = True
+        run.status = RunStatus.STOPPING
+    if container is not None:
+        stop_node(container)

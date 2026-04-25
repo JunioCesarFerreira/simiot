@@ -19,6 +19,40 @@ frontend/      SPA Vue 3 + TS (editor, canvas, dashboards)
 containers/    Dockerfiles e configs dos serviços auxiliares
 ```
 
+## Arquitetura em containers
+
+```mermaid
+flowchart LR
+    user[Usuario no navegador]
+    frontend[Frontend Vue/Vite<br/>localhost:5173]
+    backend[Backend FastAPI<br/>localhost:8000]
+    docker[Docker Engine<br/>socket local]
+
+    subgraph simiot_net["Rede Docker: simiot-net"]
+        mosquitto[Container Mosquitto<br/>MQTT 1883 / WS 9001]
+        nodered[Container Node-RED<br/>localhost:1880]
+        qemu[Container ESP32 QEMU<br/>simiot/esp32-qemu]
+        proxy[Proxy MQTT do runner<br/>0.0.0.0:1883]
+        esp32[ESP32 emulado<br/>firmware ESP-IDF]
+    end
+
+    idf[Container temporario ESP-IDF<br/>espressif/idf:release-v5.4]
+    workdir[(Artefatos de build<br/>backend/.simiot-work)]
+
+    user --> frontend
+    frontend -- HTTP /api --> backend
+    backend -- Docker SDK --> docker
+    docker -- build firmware --> idf
+    idf -- grava binarios --> workdir
+    docker -- run ultimo build --> qemu
+    qemu --> proxy
+    qemu --> esp32
+    esp32 -- mqtt://10.0.2.2:1883 --> proxy
+    proxy -- encaminha TCP --> mosquitto
+    nodered -- assina/publica topicos --> mosquitto
+    backend -- logs do container --> frontend
+```
+
 ## Rodando em desenvolvimento
 
 Pré-requisitos: Python 3.11+, Node 20+, Docker Engine (no Linux não é necessário Docker Desktop — apenas Docker Engine + Compose plugin).

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
+from shutil import rmtree
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
@@ -11,12 +12,13 @@ from pydantic import BaseModel
 from app.api.projects import _projects
 from app.core.config import settings
 from app.services.builder import build_firmware
+from app.services.firmware_paths import validate_firmware_files
 from app.services.templates import DEFAULT_FIRMWARE_FILES
 
 router = APIRouter()
 
 
-class BuildStatus(str, Enum):
+class BuildStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCEEDED = "succeeded"
@@ -66,16 +68,18 @@ def get_firmware(project_id: UUID) -> FirmwareFiles:
 @router.put("/{project_id}/firmware", response_model=FirmwareFiles)
 def put_firmware(project_id: UUID, body: FirmwareFiles) -> FirmwareFiles:
     _ensure_project(project_id)
-    if not body.files:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "firmware must not be empty")
-    _firmware[project_id] = dict(body.files)
-    return body
+    try:
+        files = validate_firmware_files(body.files)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    _firmware[project_id] = files
+    return FirmwareFiles(files=files)
 
 
 def _run_build(build_id: UUID, files: dict[str, str]) -> None:
     build = _builds[build_id]
     build.status = BuildStatus.RUNNING
-    build.started_at = datetime.now(timezone.utc)
+    build.started_at = datetime.now(UTC)
 
     def append_log(chunk: str) -> None:
         build.logs += chunk
@@ -86,11 +90,11 @@ def _run_build(build_id: UUID, files: dict[str, str]) -> None:
         build.logs += f"\ninternal error: {exc}\n"
         build.exit_code = 1
         build.status = BuildStatus.FAILED
-        build.finished_at = datetime.now(timezone.utc)
+        build.finished_at = datetime.now(UTC)
         return
     build.exit_code = exit_code
     build.status = BuildStatus.SUCCEEDED if exit_code == 0 else BuildStatus.FAILED
-    build.finished_at = datetime.now(timezone.utc)
+    build.finished_at = datetime.now(UTC)
 
 
 @router.post(
@@ -121,3 +125,11 @@ def get_build(project_id: UUID, build_id: UUID) -> Build:
     if build_id not in _builds or _builds[build_id].project_id != project_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "build not found")
     return _builds[build_id]
+
+
+def cleanup_project_firmware_state(project_id: UUID) -> None:
+    _firmware.pop(project_id, None)
+    build_ids = _project_builds.pop(project_id, [])
+    for build_id in build_ids:
+        _builds.pop(build_id, None)
+        rmtree(build_workdir(build_id), ignore_errors=True)
